@@ -1,12 +1,12 @@
 import cv2
 import numpy as np
-from facial_expression_model import FacialExpressionModel
+from .facial_expression_model import FacialExpressionModel
 
 class PredictionOn:
     def __init__(self):
-        self.capture_size = 48
-        self.trained_face_data = cv2.CascadeClassifier('predict_expression/haarcascade_frontalface_default.xml')
-        self.model = FacialExpressionModel("model.json", "model_weights.keras")
+        self.capture_size = 64
+        self.trained_face_data = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        self.model = FacialExpressionModel('model.keras')
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
     def get_prediction_on_frame(self, grayImg, co_ordinates):
@@ -28,7 +28,7 @@ class PredictionOn:
         face_co_ordinates = self.trained_face_data.detectMultiScale(grayScaledImg, 1.15)
 
         for (x, y, w, h) in face_co_ordinates:
-            prediction = self.get_prediction_on_frame(grayScaledImg, (x, y, w, h))
+            prediction = self.get_prediction_on_frame(grayScaledImg / 255., (x, y, w, h))
             self.draw_rect(prediction, img, (x, y, w, h))
 
         cv2.imshow('Face Detector', img)
@@ -43,7 +43,7 @@ class PredictionOn:
 
             face_co_ordinates = self.trained_face_data.detectMultiScale(grayScaledImg, 1.3, 5)
             for (x, y, w, h) in face_co_ordinates:
-                prediction = self.get_prediction_on_frame(grayScaledImg, (x, y, w, h))
+                prediction = self.get_prediction_on_frame(grayScaledImg / 255., (x, y, w, h))
                 self.draw_rect(prediction, frame, (x, y, w, h))
 
             cv2.imshow('Face Detector', frame)
@@ -54,11 +54,12 @@ class PredictionOn:
 
         while True:
             _, frame = webcam.read()
+            frame = cv2.flip(frame, 1)
             grayScaledImg = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             face_co_ordinates = self.trained_face_data.detectMultiScale(grayScaledImg, 1.3, 5)
             for (x, y, w, h) in face_co_ordinates:
-                prediction = self.get_prediction_on_frame(grayScaledImg, (x, y, w, h))
+                prediction = self.get_prediction_on_frame(grayScaledImg / 255., (x, y, w, h))
                 self.draw_rect(prediction, frame, (x, y, w, h))
 
             cv2.imshow('Face Detector', frame)

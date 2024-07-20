@@ -1,0 +1,12 @@
+{
+  "batch-size": 100,
+  "class-list": ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"],
+  "epoch": 60,
+  "l2-strength": 0.001,
+  "learning-rate": 0.001,
+  "model-architecture": "type1",
+  "output-size": 7,
+  "picture-size": 64,
+  "random-seed": 6345,
+  "version": "0.1.1"
+}
