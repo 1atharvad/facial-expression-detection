@@ -46,4 +46,7 @@ def read_root(img_base64: str):
 def read_root(img_base64: str):
     return {"Hello": img_base64}
 
+if __name__ == '__main__':
+    uvicorn.run(app)
+
 # uvicorn predict_expression.prediction_api:app --port 8080 --reload
