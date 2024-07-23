@@ -41,6 +41,10 @@ app.add_middleware(
     allow_headers=['*']
 )
 
+@app.get('/')
+def info():
+    return 'Welcome to Emotion Prediction API'
+
 @app.post('/api/predict-emotion/')
 async def predict_emotion(img_file: UploadFile, img_height: str, img_width: str):
     image_data = await img_file.read()
