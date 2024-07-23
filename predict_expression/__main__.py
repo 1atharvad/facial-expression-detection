@@ -2,6 +2,7 @@ import sys
 from prediction_on import PredictionOn
 
 prediction_model = PredictionOn()
+prediction_model.get_model()
 
 if len(sys.argv) > 2 and sys.argv[1] == 'img':
     prediction_model.predict_on_img(sys.argv[2])

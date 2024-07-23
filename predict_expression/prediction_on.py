@@ -1,13 +1,29 @@
 import cv2
+import json
 import numpy as np
+from pathlib import Path
 from .facial_expression_model import FacialExpressionModel
 
 class PredictionOn:
     def __init__(self):
-        self.capture_size = 64
+        self.version = '0.1.1'
+        self.get_model_details()
         self.trained_face_data = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-        self.model = FacialExpressionModel('model.keras')
         self.font = cv2.FONT_HERSHEY_SIMPLEX
+
+    def get_model(self):
+        self.model = FacialExpressionModel(f'models/model-{self.version}/model.h5', self.emotions_list)
+        return self.model
+
+    def get_model_details(self):
+        base_dir = Path(__file__).resolve().parent.parent
+        model_dir = Path(base_dir, 'models', f'model-{self.version}')
+            
+        with open(f'{model_dir}/model-details.json', 'r') as json_file:
+            model_details = json.load(json_file)
+
+        self.emotions_list = model_details['class-list']
+        self.capture_size = model_details['picture-size']
 
     def get_prediction_on_frame(self, grayImg, co_ordinates):
         x, y, w, h = co_ordinates

@@ -1,4 +1,4 @@
-# Face Expression Prediction
+# Face Expression Prediction API
 
 This Python program leverages **TensorFlow Keras** and **OpenCV** to recognize facial expressions in images, videos, or live webcam feeds.
 
