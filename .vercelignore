@@ -1,7 +1,10 @@
+.git
+.gitignore
+README.md
 images.zip
-train_model/*
+train_model/
 LICENSE
-**/**.mp4
-**/**.jpg
-**/**.jpeg
-**/**.png
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.keras
