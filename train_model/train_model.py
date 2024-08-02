@@ -58,6 +58,7 @@ class TrainModel(Model, ModelArchitecture):
         self.picture_size = model_details['picture-size']
         self.output_size = len(self.emotions_list)
         self.l2_strength = model_details['l2-strength']
+        self.learning_rate = model_details['learning_rate']
 
         self.train_model(model_details['random-seed'])
     
@@ -71,7 +72,8 @@ class TrainModel(Model, ModelArchitecture):
             horizontal_flip=True,
             width_shift_range=0.1,
             height_shift_range=0.1,
-            zoom_range=0.1
+            zoom_range=0.1,
+            validation_split = 0.2
         ).flow_from_directory(
             Path(self.image_folder_path, 'train'),
             batch_size=self.batch_size,
@@ -82,7 +84,8 @@ class TrainModel(Model, ModelArchitecture):
         )
 
         validation_set = ImageDataGenerator(
-            rescale=1./255
+            rescale=1./255,
+            validation_split = 0.2
         ).flow_from_directory(
             Path(self.image_folder_path, 'validation'),
             batch_size=self.batch_size,
@@ -131,13 +134,6 @@ class TrainModel(Model, ModelArchitecture):
         model = self.get_modal()
         model.summary()
 
-        checkpoint = ModelCheckpoint(
-            filepath=f'models/model-{self.version}/model.keras',
-            save_best_only=True,
-            verbose=1,
-            mode='max',
-            monitor='accuracy'
-        )
         reduce_lr = ReduceLROnPlateau(
             monitor='val_loss',
             factor=0.2,
@@ -147,7 +143,7 @@ class TrainModel(Model, ModelArchitecture):
         )
         
         model.compile(
-            optimizer=optimizers.Adam(0.001),
+            optimizer=optimizers.Adam(self.learning_rate),
             loss='categorical_crossentropy',
             metrics=['accuracy']
         )
@@ -156,7 +152,7 @@ class TrainModel(Model, ModelArchitecture):
             epochs=self.epoch,
             batch_size=self.batch_size,
             validation_data=validation_set,
-            callbacks=[checkpoint, reduce_lr]
+            callbacks=[reduce_lr]
         )
 
         model.save(f'models/model-{self.version}/model.h5')

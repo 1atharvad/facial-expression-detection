@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import uvicorn
 from .prediction_on import PredictionOn
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 class PredictExpressionAPI(PredictionOn):
@@ -14,13 +14,9 @@ class PredictExpressionAPI(PredictionOn):
         self.trained_face_data = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         self.model = self.get_model()
 
-    def predict_on_img(self, image_data: bytes, image_dim):
-        np_array = np.fromstring(image_data, np.uint8)
-        image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-        resized_img = cv2.resize(image, (int(image_dim['img_width']), int(image_dim['img_height'])))
-        grayScaledImg = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
-        face_co_ordinates = self.trained_face_data.detectMultiScale(grayScaledImg, 1.1)
+    def get_face_co_ordinates(self, grayScaledImg):
         prediction_data = []
+        face_co_ordinates = self.trained_face_data.detectMultiScale(grayScaledImg, 1.1)
 
         for coordinates in face_co_ordinates:
             prediction_data.append({
@@ -29,6 +25,14 @@ class PredictExpressionAPI(PredictionOn):
             })
 
         return prediction_data
+
+    def predict_on_img(self, image_data: bytes, image_dim: dict):
+        np_array = np.fromstring(image_data, np.uint8)
+        image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+        resized_img = cv2.resize(image, (int(image_dim['img_width']), int(image_dim['img_height'])))
+        grayScaledImg = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
+
+        return self.get_face_co_ordinates(grayScaledImg)
     
 app = FastAPI()
 api = PredictExpressionAPI()
@@ -46,7 +50,7 @@ def info():
     return 'Welcome to Emotion Prediction API'
 
 @app.post('/api/predict-emotion/')
-async def predict_emotion(img_file: UploadFile, img_height: str, img_width: str):
+async def predict_emotion(img_file: UploadFile, img_height: str = Form(...), img_width: str = Form(...)):
     image_data = await img_file.read()
     image_dim = {
         'img_height': img_height,
