@@ -6,24 +6,20 @@ from .facial_expression_model import FacialExpressionModel
 
 class PredictionOn:
     def __init__(self):
-        self.version = '0.1.1'
-        self.get_model_details()
+        self.get_model_details('0.1.1')
         self.trained_face_data = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
-    def get_model(self):
-        self.model = FacialExpressionModel(f'models/model-{self.version}/model.h5', self.emotions_list)
-        return self.model
-
-    def get_model_details(self):
+    def get_model_details(self, version):
         base_dir = Path(__file__).resolve().parent.parent
-        model_dir = Path(base_dir, 'models', f'model-{self.version}')
+        model_dir = Path(base_dir, 'models', f'model-{version}')
             
         with open(f'{model_dir}/model-details.json', 'r') as json_file:
             model_details = json.load(json_file)
 
         self.emotions_list = model_details['class-list']
         self.capture_size = model_details['picture-size']
+        self.model = FacialExpressionModel(f'models/model-{version}/model.h5', self.emotions_list)
 
     def get_prediction_on_frame(self, grayImg, co_ordinates):
         x, y, w, h = co_ordinates
@@ -36,7 +32,7 @@ class PredictionOn:
         text_size, _ = cv2.getTextSize(prediction, self.font, 1, 2)
         cv2.rectangle(img_frame, (x, y - 30 - text_size[1]), (x + text_size[0], y - 10), (180, 184, 176), -1)
         cv2.putText(img_frame, prediction, (x, y - 20), self.font, 1, (69, 74, 24), 2)
-        cv2.rectangle(img_frame, (x, y), (x + w, y + h), (106, 118, 252), 4)
+        cv2.rectangle(img_frame, (x, y), (x + w, y + h), (106, 118, 252), 2)
 
     def predict_on_img(self, img_file):
         img = cv2.imread(img_file)

@@ -1,10 +1,12 @@
 import os
 import json
+import shutil
 from pathlib import Path
 import numpy as np
+import random
 from keras import utils, Model, optimizers
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from keras.preprocessing.image import ImageDataGenerator
+from keras.callbacks import ReduceLROnPlateau
 import matplotlib.pyplot as plt
 from model_architecture import ModelArchitecture
 
@@ -15,12 +17,14 @@ class TrainModel(Model, ModelArchitecture):
 
         self.image_folder_path = 'images/'
         self.get_model_details()
+        self.train_k_fold_models()
 
     def get_model_details(self):
         model_details = {
             'batch-size': 100,
             'class-list': ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise'],
             'epoch': 60,
+            'k-fold': 1,
             'l2-strength': 0.001,
             'learning-rate': 0.001,
             'model-architecture': 'type1',
@@ -58,9 +62,70 @@ class TrainModel(Model, ModelArchitecture):
         self.picture_size = model_details['picture-size']
         self.output_size = len(self.emotions_list)
         self.l2_strength = model_details['l2-strength']
-        self.learning_rate = model_details['learning_rate']
+        self.learning_rate = model_details['learning-rate']
+        self.seed = model_details['random-seed']
+        self.k_fold = model_details['k-fold']
 
-        self.train_model(model_details['random-seed'])
+    def train_k_fold_models(self):
+        fold_size = self.get_fold_sizes() / self.k_fold
+
+        for fold in range(self.k_fold):
+            self.fold = fold + 1
+            self.load_data('train', int(fold * fold_size), int((fold + 1) * fold_size))
+            self.train_model()
+    
+    def get_fold_sizes(self):
+        dataset_name = 'train'
+        dir_path = ['images', dataset_name]
+        img_count = {}
+
+        for folder in os.listdir(os.path.join(*dir_path)):
+            if folder in ['.DS_Store']:
+                continue
+            img_count[folder] = len(os.listdir(os.path.join(*[*dir_path, folder])))
+
+        return max(img_count.values())
+    
+    def load_data(self, dataset_name, start, end):
+        dir_path = ['images', dataset_name]
+        dest_dir_path = ['images', f'{dataset_name}-{self.fold}']
+
+        if os.path.exists(os.path.join(*dest_dir_path)):
+            shutil.rmtree(os.path.join(*dest_dir_path), ignore_errors=False, onerror=None)
+        os.makedirs(os.path.join(os.path.join(*dest_dir_path)))
+
+        for folder in os.listdir(os.path.join(*dir_path)):
+            if folder in ['.DS_Store']:
+                continue
+            dir_path.append(folder)
+            dest_dir_path.append(folder)
+
+            if not os.path.exists(os.path.join(*dest_dir_path)):
+                os.makedirs(os.path.join(*dest_dir_path))
+
+            count = -1
+            file_list = os.listdir(os.path.join(*dir_path))
+            file_count = len(file_list)
+
+            for file in file_list:
+                count += 1
+
+                if count < start:
+                    continue
+                img_path = os.path.join(*dir_path, file)
+                shutil.copy(img_path, os.path.join(*dest_dir_path))
+
+                if count == end - 1:
+                    break
+
+            deficit = min(file_count, end - start) - (0 if count < start else count - start + 1)
+
+            for file_index in random.sample(list(set(np.arange(0, file_count)) - set(np.arange(start, end))), deficit):
+                img_path = os.path.join(*dir_path, file_list[file_index])
+                shutil.copy(img_path, os.path.join(*dest_dir_path))
+
+            dir_path = dir_path[:-1]
+            dest_dir_path = dest_dir_path[:-1]
     
     def get_train_test(self):
         ''' Gets the training and testing dataset from the images which are
@@ -75,7 +140,7 @@ class TrainModel(Model, ModelArchitecture):
             zoom_range=0.1,
             validation_split = 0.2
         ).flow_from_directory(
-            Path(self.image_folder_path, 'train'),
+            Path(self.image_folder_path, f'train-{self.fold}'),
             batch_size=self.batch_size,
             classes=self.emotions_list,
             target_size=(self.picture_size, self.picture_size),
@@ -127,8 +192,8 @@ class TrainModel(Model, ModelArchitecture):
         plt.savefig(f'models/model-{self.version}/accuracy_loss_plot.png', dpi=300)
         plt.show()
 
-    def train_model(self, seed):
-        utils.set_random_seed(seed)
+    def train_model(self):
+        utils.set_random_seed(self.seed)
 
         train_set, validation_set = self.get_train_test()
         model = self.get_modal()
@@ -158,3 +223,25 @@ class TrainModel(Model, ModelArchitecture):
         model.save(f'models/model-{self.version}/model.h5')
         self.plot_graph(history)
 
+class PlotGraph:
+    def __init__(self, version):
+        self.version = version
+
+    def plot_accuracy_loss_graph(self, history):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+        ax1.plot(history.history['accuracy'], label='Train')
+        ax1.plot(history.history['val_accuracy'], label='Test')
+        ax1.set_title('Model Accuracy')
+        ax1.set_xlabel('Epochs')
+        ax1.set_ylabel('Accuracy')
+        ax1.legend()
+
+        ax2.plot(history.history['loss'], label='Train')
+        ax2.plot(history.history['val_loss'], label='Test')
+        ax2.set_title('Model Loss')
+        ax2.set_xlabel('Epochs')
+        ax2.set_ylabel('Loss')
+        ax2.legend()
+        fig.tight_layout()
+        plt.savefig(f'models/model-{self.version}/accuracy_loss_plot.png', dpi=300)
+        plt.show()
